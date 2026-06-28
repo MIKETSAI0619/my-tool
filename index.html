@@ -1,0 +1,117 @@
+�
+
+�
+計算機 * { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+min-height: 100vh;
+display: flex;
+align-items: center;
+justify-content: center;
+background: linear-gradient(135deg, #0f0f0f 0%, #1c1c1e 100%);
+font-family: 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+}
+.shell {
+width: 320px;
+border-radius: 28px;
+overflow: hidden;
+box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+background: #1c1c1e;
+}
+.display {
+background: #111113;
+padding: 28px 24px 20px;
+text-align: right;
+transition: background 0.12s;
+}
+.display.flash { background: #1a2a1a; }
+.expr {
+color: rgba(255,255,255,0.35);
+font-size: 0.85rem;
+min-height: 1.2em;
+letter-spacing: 0.02em;
+margin-bottom: 4px;
+font-weight: 300;
+word-break: break-all;
+}
+.number {
+color: #ffffff;
+font-weight: 200;
+letter-spacing: -0.02em;
+line-height: 1.1;
+font-size: 3.2rem;
+transition: font-size 0.15s;
+font-variant-numeric: tabular-nums;
+word-break: break-all;
+}
+.grid {
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 1px;
+background: #0a0a0a;
+padding: 1px;
+}
+button {
+background: #2c2c2e;
+color: #ffffff;
+border: none;
+font-size: 1.35rem;
+font-weight: 400;
+height: 72px;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: transform 0.08s, filter 0.08s;
+outline: none;
+font-family: inherit;
+letter-spacing: -0.01em;
+-webkit-tap-highlight-color: transparent;
+}
+button:hover { filter: brightness(1.18); }
+button:active { transform: scale(0.94); }
+button.fn {
+background: #3a3a3c;
+font-size: 1.15rem;
+font-weight: 500;
+}
+button.op {
+background: #ff9f0a;
+font-weight: 500;
+}
+button.op.active {
+background: #ffffff;
+color: #ff9f0a;
+}
+button.eq {
+background: #30d158;
+font-weight: 600;
+}
+button.wide {
+grid-column: span 2;
+justify-content: flex-start;
+padding-left: 26px;
+}
+.hint {
+text-align: center;
+color: rgba(255,255,255,0.18);
+font-size: 0.7rem;
+padding: 10px 0 14px;
+letter-spacing: 0.04em;
+background: #1c1c1e;
+}
+
+�
+
+�
+ 
+
+0
+
+AC +/- % ÷ 7 8 9 × 4 5 6 − 1 2 3 + 0 . = 
+
+支援鍵盤輸入 · Keyboard supported
+
+
+�
+let display = '0', prev = null, operator = null, waiting = false, expression = '', justCalc = false; const elNumber = document.getElementById('number'); const elExpr = document.getElementById('expr'); const elDisplay = document.getElementById('display'); function round(n) { return Math.round(n * 1e10) / 1e10; } function calculate(a, b, op) { if (op === '+') return round(a + b); if (op === '−') return round(a - b); if (op === '×') return round(a * b); if (op === '÷') return b === 0 ? 'Error' : round(a / b); return b; } function formatNumber(val) { if (val === 'Error') return 'Error'; const num = parseFloat(val); if (isNaN(num)) return val; if (Math.abs(num) >= 1e12 || (Math.abs(num) < 1e-6 && num !== 0)) return num.toExponential(4); if (val.toString().includes('.')) { const [int, dec] = val.toString().split('.'); return Number(int).toLocaleString('zh-TW') + '.' + dec; } return Number(val).toLocaleString('zh-TW'); } function render() { const len = display.replace(/[^0-9.]/g, '').length; elNumber.style.fontSize = len > 9 ? '2rem' : display.length > 7 ? '2.6rem' : '3.2rem'; elNumber.textContent = formatNumber(display); elExpr.innerHTML = expression || '&nbsp;'; document.querySelectorAll('button.op').forEach(btn => { btn.classList.toggle('active', btn.dataset.op === operator && waiting); }); } function flash() { elDisplay.classList.add('flash'); setTimeout(() => elDisplay.classList.remove('flash'), 120); } function inputDigit(d) { if (justCalc) { display = d; expression = ''; justCalc = false; } else if (waiting) { display = d; waiting = false; } else { display = display === '0' ? d : display.length < 12 ? display + d : display; } render(); } function inputDot() { if (justCalc) { display = '0.'; expression = ''; justCalc = false; } else if (waiting) { display = '0.'; waiting = false; } else if (!display.includes('.')) { display += '.'; } render(); } function handleOp(op) { const current = parseFloat(display); if (prev !== null && !waiting) { const result = calculate(prev, current, operator); display = String(result); prev = result; expression = result + ' ' + op; } else { prev = current; expression = display + ' ' + op; } operator = op; waiting = true; justCalc = false; render(); } function handleEqual() { if (operator === null || waiting) return; const current = parseFloat(display); const result = calculate(prev, current, operator); expression = expression.replace(/[+−×÷]$/, '') + ' ' + operator + ' ' + display + ' ='; display = String(result); prev = null; operator = null; waiting = false; justCalc = true; flash(); render(); } function handleAC() { display = '0'; prev = null; operator = null; waiting = false; expression = ''; justCalc = false; render(); } function handleSign() { display = String(parseFloat(display) * -1); render(); } function handlePercent() { display = String(parseFloat(display) / 100); render(); } function handleBackspace() { if (justCalc || display === 'Error') { handleAC(); return; } display = display.length > 1 ? display.slice(0, -1) : '0'; render(); } document.querySelectorAll('button').forEach(btn => { btn.addEventListener('click', () => { const a = btn.dataset.action; if (a === 'digit') inputDigit(btn.dataset.digit); else if (a === 'dot') inputDot(); else if (a === 'op') handleOp(btn.dataset.op); else if (a === 'eq') handleEqual(); else if (a === 'ac') handleAC(); else if (a === 'sign') handleSign(); else if (a === 'percent') handlePercent(); }); }); document.addEventListener('keydown', e => { if (e.key >= '0' && e.key <= '9') inputDigit(e.key); else if (e.key === '.') inputDot(); else if (e.key === '+') handleOp('+'); else if (e.key === '-') handleOp('−'); else if (e.key === '*') handleOp('×'); else if (e.key === '/') { e.preventDefault(); handleOp('÷'); } else if (e.key === 'Enter' || e.key === '=') handleEqual(); else if (e.key === 'Escape') handleAC(); else if (e.key === '%') handlePercent(); else if (e.key === 'Backspace') handleBackspace(); }); render(); 
+�
